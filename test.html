@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار المحادثة باللغة العربية</title>
+    <script defer>
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordings = JSON.parse(localStorage.getItem("recordings")) || [];
+
+        function startRecording() {
+            audioChunks = [];
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const fileName = "answer_" + new Date().toISOString().replace(/[:.]/g, "-") + ".wav";
+                        recordings.push({ name: fileName, url: audioUrl });
+                        localStorage.setItem("recordings", JSON.stringify(recordings));
+                        displayRecordings();
+                    };
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+        }
+
+        function displayRecordings() {
+            const list = document.getElementById("recordingsList");
+            list.innerHTML = "";
+            recordings.forEach((rec, index) => {
+                const listItem = document.createElement("li");
+                const audio = document.createElement("audio");
+                audio.controls = true;
+                audio.src = rec.url;
+
+                const downloadLink = document.createElement("a");
+                downloadLink.href = rec.url;
+                downloadLink.download = rec.name;
+                downloadLink.textContent = "تحميل";
+                downloadLink.style.marginLeft = "10px";
+
+                listItem.appendChild(audio);
+                listItem.appendChild(downloadLink);
+                list.appendChild(listItem);
+            });
+        }
+
+        function clearRecordings() {
+            if (confirm("هل أنت متأكد من حذف جميع التسجيلات؟")) {
+                localStorage.removeItem("recordings");
+                recordings = [];
+                displayRecordings();
+            }
+        }
+    </script>
+</head>
+<body onload="displayRecordings()">
+    <h2>اختبار المحادثة باللغة العربية</h2>
+    <p>استمع إلى السؤال ثم قم بتسجيل إجابتك.</p>
+    <h3>السؤال 1:</h3>
+    <audio controls>
+        <source src="question1.mp3.ogg" type="audio/ogg">
+        متصفحك لا يدعم تشغيل الصوت.
+    </audio>
+    <br>
+    <button onclick="startRecording()">ابدأ التسجيل</button>
+    <button onclick="stopRecording()">أوقف التسجيل</button>
+    <br>
+    <h3>التسجيلات المحفوظة:</h3>
+    <ul id="recordingsList"></ul>
+    <br>
+    <button onclick="clearRecordings()">🗑️ حذف جميع التسجيلات</button>
+</body>
+</html>
